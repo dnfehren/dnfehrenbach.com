@@ -1,0 +1,202 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+<script type="text/javascript" src="/site_code/jquery.js"></script>
+<script type="text/javascript" src="/site_code/thickbox.js"></script>
+
+<title>Daniel Fehrenbach : EPA Toxic Resease Data Set : Part 3</title>
+<style type="text/css" media="screen">
+@import "/general.css";
+</style>
+</head>
+
+
+
+
+<body>
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/">Front</a> | 
+		<a href="http://dnfehrenbach.com/resume.html">Resume</a> | 
+		<a href="http://dnfehrenbach.com/projects.html">Data Analysis and Applications</a> | 
+		<a href="http://dnfehrenbach.com/education.html">MSI Course Work</a> | 
+		<a href="http://dnfehrenbach.com/writings.html">Writings</a> | 
+		<a href="http://dnfehrenbach.com/contact.html">Contact</a>
+	</p>
+</div>
+
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part1/part1.html">Part 1 : Pie</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part2/part2.html">Part 2 : Exploration</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part3/part3.html">Part 3 : Factors</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part4/part4.html">Part 4 : Layers</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part5/part5.html">Part 5 : Geoms/Stats</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part6/part6.html">Part 6 : Polishing</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part7/part7.html">Part 7 : Final Thoughts</a>
+	</p>
+</div>
+
+
+
+<div id="Content">
+	<h1>: EPA TRI Data Analysis : Part 3</h1>
+	<h2>Using Factors</h2>
+	
+	<p>The goal of this shorter exercise is make use of the factoring capabilities of <a href="http://www.r-project.org/">R</a> to reduce the complications of large data sets.  In this case we will be working to determine if counties with higher percentages of poverty show any difference in the ammount of toxic releases.</p>
+	
+	<p>The EPA Toxic Release Inventory 2008 dataset will again be used for this exercise but other information will be added to it.</p>
+	
+	<h3>Section 1 : Preparing the R workspace</h3>
+	<br />
+	<p>Get the modules and the data you needed loaded in to R.  We will be using the sqlite database of the data set, which can be created based on instructions in Part 2, or by downloading it from this page</p>
+    
+	<p><strong>Step 1</strong>: Load the sqlite and the ggplot library.<p>
+	<p><code>library(RSQLite)</code></p>
+    <p><code>library(ggplo2)</code></p>
+	
+	<p><strong>Step 2</strong>: Create the database connection.<p>
+	<p><code>con <- dbConnect(SQLite(), "C:\\Users\\dnfehren\\Desktop\\epa.sqlite")</code></p>
+
+	
+    <h3>Section 2 : Gathering and Preparing the Toxic Release Data</h3>
+	<br />
+	<p><strong>Step 1</strong>: Create and send a query to the database asking for state, county and total release data.<p>
+	<p><code>query <- dbSendQuery(con, statement = "SELECT ST, County, Carcinogen, Total_Releases from tri");</code></p>
+    
+    <p><strong>Step 2</strong>: Fetch an R dataframe from the query.<p>
+	<p><code>return <- fetch(query, n = -1)</code></p>
+	
+    <p><strong>Step 3</strong>: Reclass some of the data frame columns from character to more useful classes.<p>
+	<p><code>replace_tr <- as.numeric(return$Total_Releases)</code></p>
+	<p><code>return$Total_Releases <- replace_tr</code></p>
+
+	<p><code>rreplace_car <- as.factor(return$Carcinogen)</code></p>
+	<p><code>return$Carcinogen <- replace_car</code></p>
+    
+    <p><strong>Step 5</strong>: Rename the columns.<p>
+	<p><code>colnames(return) <- c("state", "county", "carcinogen", "total_rel")</code></p>
+	
+    <p><strong>Step 6</strong>: Now the factoring, first thing to do is create points where the data will be cut into factors and the labels for those factors.<p>
+    <ul>
+	<li>The cutpoints were based on numbers found using the summary() function.  The -1 as the first number ensures that release totals that equal 0 are still captured in the first cut</li> 
+	</ul>
+	<p><code>cutpoints_c <- c(-1,.3,200,4000,30000,3.305e+08)</code></p>
+    <p><code>cutlabels_c <- c("small","med-small","med","large","very large")</code></p>
+    
+    <p><strong>Step 7</strong>: Create a new column with the cut data as factors then save that column into the origional data frame.<p>
+	<p><code>chem_cut <- cut(return$total_rel, breaks = cutpoints_c, labels = cutlabels_c)</code></p>
+	<p><code>return$total_rel <- chem_cut</code></p>
+	
+    
+    <h3>Section 2 : Gathering and Preparing the County Poverty Data</h3>
+	<br />
+    <p>County by county poverty data was found through the US Census 2008 data available <a href="http://www.census.gov/did/www/saipe/data/statecounty/data/2008.html" target="_blank">here</a>.  The data comes as an excel spreadsheet but should be edited to clean up column names and re-saved as a .csv file for easier reading in R.</p>
+	<p><strong>Step 1</strong>: Load csv table into a R data frame.<p>
+	<p><code>pov <- read.csv("C:\\Users\\dnfehren\\Desktop\\est08ALL_edit.csv")</code></p>
+    
+    <p><strong>Step 2</strong>: Create cut points and lables.<p>
+	<p><code>cutpoints_p <- c(0,11,16,20,30,55)</code></p> 
+	<p><code>cutlabels_p <- c("low","med-low","med","med-high","high")</code></p> 
+
+	<p><strong>Step 3</strong>: Perform cut and replace the old column in data frame</p>
+	<p><code>pov_cut <- cut(pov$Poverty_Percent_All_Ages, breaks = cutpoints_p, labels = cutlabels_p)</code></p> 
+	<p><code>pov$Poverty_Percent_All_Ages <- pov_cut</code></p> 
+
+	<p><strong>Step 4</strong>: These are a lot of columns that aren't necessary for us in the poverty data, we'll a smaller data frame of columns using cbind</p>
+	<p><code>pov_sum <- cbind(pov[3],pov[4],pov[8])</code></p> 
+
+	<p><strong>Step 5</strong>: Rename the columns and uppercase all county names to match the EPA data.<p>
+	<p><code>colnames(pov_sum) <- c("state", "county", "pov_percent")</code></p> 
+	<p><code>pov_sum$county <- toupper(pov_sum$county)</code></p> 
+
+
+	<h3>Section 3 : Merging the Data and Creating Plots</h3>
+	<br />
+	<p><strong>Step 1</strong>: Merge the two data frames, this will automatically use columns with the same names (here state and county) to join the frames together<p>
+	<p><code>merged_pov_chem <- merge(return, pov_sum)</code></p> 
+
+	<p><strong>Step 2</strong>: Create a plot based on the merged data showing how often releases of each size occured in counties with each level of poverty.<p>
+	<p><code>ggplot(merged_pov_chem, aes(x=pov_percent, fill=total_rel)) + geom_bar(position="dodge")</code></p> 
+
+	<h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/poverty_percent_and_release_size.png" class="thickbox"><img src="/images/ggplot2/poverty_percent_and_release_size_fitted.png" alt="Bar chart of number of release events, categorized by size, in counties grouped by poverty level"/></a></p>
+	
+	<p><strong>Step 3</strong>: Create a plot based on merged data showing the prevalence of carcinogenic chemicals released in each county category.</p> 
+    <p><code>ggplot(merged_pov_chem, aes(x=pov_percent, fill=carcinogen)) + geom_bar(position="dodge")</code></p>
+	
+	<h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/carcinogens_by_county_poverty.png" class="thickbox"><img src="/images/ggplot2/carcinogens_by_county_poverty_fitted.png" alt="Bar chart of number of carcinogenic release events, categorized by county poverty level"/></a></p>
+	
+	<p><strong>Step 4</strong>: Create a historgram showing the count of all release events by county category.</p> 
+    <p><code>qplot(pov_percent, data=merged_pov_chem, geom="histogram")</code></p>	
+		
+	<h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/county_poverty_histogram.png" class="thickbox"><img src="/images/ggplot2/county_poverty_histogram_fitted.png" alt="Histogram showing the count of release events over county poverty levels"/></a></p>
+	
+	<h3>Section 4 : Comparing Percentages</h3>
+	<br />
+	<p>Since the counts of the some of the factor categories are so varied, it made sense to try to compare the percentages of each type of release for each type of county.</p>
+
+	<p>The following data was not generated using R, the Excel sheet that was used is in the Files section of this page.</p>
+	<p>Revised code to accomplish this using R will be forthcoming.</p>
+	<table border="1">
+	<tr>
+		<td>_____</td>
+		<td>small</td>
+		<td>med-small</td>
+		<td>med</td>
+		<td>large</td>
+		<td>very-large</td>
+	</tr>
+	<tr>
+	<td>low</td><td>27.07</td><td>26.14</td><td>24.52</td><td>13.33</td><td>8.94</td>
+	</tr>
+	<tr>
+	<td>med-low</td><td>25.74</td><td>24.73</td><td>25.67</td><td>13.83</td><td>10.03</td>
+	</tr>
+	<tr>
+	<td>med</td><td>22.61</td><td>25.03</td><td>24.91</td><td>15.04</td><td>12.41</td>
+	</tr>
+	<tr>
+	<td>med-high</td><td>24.71</td><td>23.03</td><td>21.66</td><td>15.4</td><td>15.2</td>
+	</tr>
+	<tr>
+	<td>high</td><td>22.72</td><td>19.2</td><td>18.97</td><td>16.16</td><td>22.95</td>
+	</tr>
+	</table> 
+	
+	<h3>Section 5 : Conclusions</h3>
+	<br />
+	<p>Though it does not appear in the visualizations based on counting events, when the percentages of the occurrence of toxic release events are calculated the high prevalence of large toxic releases in the poorest counties becomes more clear.</p>
+	
+	<h3>Files</h3>
+	
+	<p><a href="/projects/epa_analysis/part3/factors.r">R Script</a> this can be loaded in R and used to reproduce this exercise's commands.</p>
+	
+	<p><a href="/projects/epa_analysis/part2/epa.sqlite">SQLite database file of EPA data.</a></p>
+    
+    <p><a href="/projects/epa_analysis/part3/county_poverty.zip">Zipped .csv file containing a cleaned version of the county poverty data from the US Census.</a></p>
+	
+	<p><a href="/projects/epa_analysis/part3/release_size_percentage_table.xls">Excel spreadsheet used to determin release percentages.</a></p>
+</div>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-15230053-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

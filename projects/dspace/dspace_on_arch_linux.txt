@@ -1,0 +1,187 @@
+Installing DSpace version 1.6.2 on Arch Linux (on VirtualBox on Windows XP)
+
+Dan Fehrenbach (dnfehrenbach@gmail.com) 11-15-2010
+
+These steps describe in full how I went about installing the 
+DSpace document repository management software (http://www.dspace.org/)
+on a virtual instance of Arch Linux (http://www.archlinux.org/) 
+with the intention of working with DSpace on my personal desktop.  
+Until the last few steps it should also apply to getting DSpace 
+running on any type of Arch machine.  This isntance also uses gmail as the DSpace
+email server, your setup might require something else.
+
+I'll try to get some better formatting on this shortly.
+
+Also, there are some permission changes/requirements that I don't 
+understand that I have yet to troubleshoot.  When in doubt, try a 
+step as root.
+
+-helpful urls----------------------------
+http://rspproject.wordpress.com/2010/07/28/installing-dspace-on-centos-5/
+http://www.dspace.org/1_6_2Documentation/ch03.html#N107D4
+http://blog.stuartlewis.com/2009/09/05/using-gmail-with-dspace/
+
+-vmsettings----------------------------
+bridge network connections, set vm network adaptor to bridged, MAC Bridge MiniPort
+
+
+-----------------------------------------------------------------------
+Install
+-----------------------------------------------------------------------
+
+#update repositories and any existing packages
+pacman -Syy
+
+pacman -Syu
+
+#install java
+pacman -S jdk
+
+#install tomcat
+pacman -S tomcat
+
+#edit tomcat config to provide unicode support
+nano /opt/tomcat/conf/server.xml
+
+-in config file example-----------------------
+
+<!-- Define a non-SSL HTTP/1.1 Connector on port 8080 -->
+<Connector port="8080"
+              maxThreads="150"
+              minSpareThreads="25"
+	          maxSpareThreads="75"
+              enableLookups="false"
+              redirectPort="8443"
+	          acceptCount="100"
+              connectionTimeout="20000"
+	          disableUploadTimeout="true"
+@add@    URIEncoding="UTF-8"/>
+
+--------------------------------------------------
+
+#set java options
+export JAVA_OPTS="-Xmx512M -Xms64M -Dfile.encoding.UTF-8"
+
+#install apache ant
+pacman -S apache-ant
+
+#install junit - optional
+pacman -S junit
+
+#install maven
+pacman -S maven
+
+#install postgres database
+pacman -S postgresql
+
+#update profile path
+source /etc/profile
+
+#check for proper java install
+java -version
+
+#check for propoer ant install
+ant -version
+
+#check for proper maven install
+mvn --version
+
+#start the postgres server
+/etc/rc.d/postgresql start
+
+#edit the server start config to automatically start the postgres daemon
+nano /etc/rc.conf
+
+-in rc.conf file example-----------------------
+DAEMONS=(syslog-ng network netfs crond @add@ postgresql)
+-------------------------------------------------
+
+#edit the postgres config to listen for local users
+nano /var/lib/postgres/data/postgresql.conf
+
+-postgresql.conf file example------------------
+listen_addresses = 'localhost'
+---------------------------------------------------
+
+#edit the postgres host file to tighten security
+nano /var/lib/postgres/data/pg_hba.conf # add new host information
+
+-pg_hba.conf  file example-----------------------
+host dspace dspace 127.0.0.1 255.255.255.255 md5
+------------------------------------------------------
+
+#restart postgres db
+/etc/rc.d/postgresql restart
+
+#create the dspace user and set a password
+useradd -m dspace
+passwd dspace
+
+#allow dspace user to owntomcat directory
+cd /opt
+chown -R dspace:dspace tomcat
+
+#switch to postgres user and create a 'dspace' user and password for the postgres database
+su postgres
+createuser -U postgres -d -A -P dspace
+
+#switch to dspace user (server user) and create a database called 'dspace'
+su dspace
+createdb -U dspace -E UNICODE dspace
+
+#exit to root
+exit
+
+#download dspace source tarball
+cd /home/dspace
+wget -c "http://sourceforge.net/projects/dpsace/files/DSpace Stable/1.6.2/dspace-1.6.2-src-release.tar.gz"
+
+#untar
+tar xf dspace-1.6.2-src-release.tar.gz
+
+###perform main config, install directory, site name, mail services etc...
+##uncomment the additional mail parameters which are automatically set up for a gmail-like connection
+nano /home/dspace/dspace-1.6.2-src-release/dspace/config/dspace.cfg
+
+#create what will be the working (non-source) dspace directory in the /opt directory, allow the dspace (server) user to own it
+cd /opt
+mkdir dspace
+chown dspace:dspace dspace
+
+#switch back to dspace user - you might not do this and stay as root
+su dspace
+
+#run the maven package maker
+cd /home/dspace/dspace-1.6.2-src-release/dspace
+mvn package
+
+#run the ant script
+cd /home/dspace/dspace-1.6.2-src-release/dspace/target/dspace-1.6.2-build.dir/
+ant fresh_install
+
+#copy all dspace webapp files/directories to the tomcat server serving location
+su root
+cp -R /opt/dspace/webapps/* /opt/tomcat/webapps
+
+#create the initial administrator account, password etc
+cd /opt/dspace/bin
+create_administrator
+
+reboot
+
+-----------------------------------------------------------------------
+Running
+-----------------------------------------------------------------------
+
+#login as root and start tomcat
+sh /opt/tomcat/bin/startup.sh
+
+#check servers IP address
+ifconfig
+
+-----------------------------------------------------------------------
+Using
+-----------------------------------------------------------------------
+
+#in your web browser...
+Go to (ip address @eth0):8080/jspui

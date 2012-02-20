@@ -1,0 +1,284 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+<script type="text/javascript" src="/site_code/jquery.js"></script>
+<script type="text/javascript" src="/site_code/thickbox.js"></script>
+
+<title>Daniel Fehrenbach : EPA Toxic Resease Data Set : Part 2</title>
+<style type="text/css" media="screen">
+@import "/general.css";
+</style>
+</head>
+
+
+
+
+<body>
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/">Front</a> | 
+		<a href="http://dnfehrenbach.com/resume.html">Resume</a> | 
+		<a href="http://dnfehrenbach.com/projects.html">Data Analysis and Applications</a> | 
+		<a href="http://dnfehrenbach.com/education.html">MSI Course Work</a> | 
+		<a href="http://dnfehrenbach.com/writings.html">Writings</a> | 
+		<a href="http://dnfehrenbach.com/contact.html">Contact</a>
+	</p>
+</div>
+
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part1/part1.html">Part 1 : Pie</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part2/part2.html">Part 2 : Exploration</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part3/part3.html">Part 3 : Factors</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part4/part4.html">Part 4 : Layers</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part5/part5.html">Part 5 : Geoms/Stats</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part6/part6.html">Part 6 : Polishing</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part7/part7.html">Part 7 : Final Thoughts</a>
+	</p>
+</div>
+
+
+
+
+<div id="Content">
+	<h1>: EPA TRI Data Analysis : Part 2</h1>
+	<h2>Exploratory Views</h2>
+	
+	<p>The goal of this exercise is to go deeper into <a href="http://www.r-project.org/">R</a> and <a href="http://had.co.nz/ggplot/">ggplot2</a> and to use them to make more interesting exploratory graphics.</p>
+	
+	<p>I am still using the EPA Toxic Release Inventory 2008 dataset, but will use the exercise to go a bit further than one county like in part 1.</p>
+	
+	<h3>Section 1 : Preparing the R workspace</h3>
+	<br />
+	<p>These are standard steps that will get ggplot loaded and the data into a R data frame, you'll be doing this in every exercise.</p>
+	
+	<p><strong>Step 1</strong>: Load the ggplot library (if you did part one it should be installed).<p>
+	<p><code>library(ggplo2)</code></p>
+	
+	<p><strong>Step 2</strong>: Load the dataset.<p>
+	<p>Hopefully you still have the dataset in an R-readable form from Part 1, if so you can use the same commands to load the EPA data into R.</p>
+	<p><code>chem = read.delim("C:\\Users\\dnfehren\\Desktop\\tri_2008_US_v08.txt")</code></p>
+	
+	<h3>Section 2 : Which industries had the most release events in 2008?</h3>
+	<br />
+	<p>We'll make a bar chart to figure this out, there are other ways that you could do it but this seems to work nicely.</p>
+	
+	<p><strong>Step 1</strong>: NAICS codes allow for the identification of specific business groups.  You can get the official listing from <a href="http://www.census.gov/naics/2007/index.html">the Census Bureau.</a> Get the 2007 file and use Excel or another spreadsheet program to convert it from a .xls file to a .csv</p>
+
+	<p><strong>Step 2</strong>: Read the NAICS codes into a data frame.</p>
+	<p><code>naics_description <- read.csv("C:\\Users\\dnfehren\\Desktop\\naics07-6.csv")</code></p>
+	
+	<p><strong>Step 3</strong>: Use R's table() function to get the frequencies of each NAICS code and save that table into a new data frame.</p>
+	<p><code>naics_cnt_frm = data.frame(table(chem$Primary.NAICS))</code></p>
+
+	<p><strong>Step 4</strong>: Extract a subset of the new data frame, grabbing only rows with NAICS identifiers that have a frequency count greater than 500</p>
+	<ul>
+	<li>The column name "Freq" is automatically created by the table function, check to make sure your column names match this code.</li> 
+	</ul>
+	<p><code>naics_cnt_subfrm = subset(naics_cnt_frm, Freq > 250)</code></p>
+	
+	<p><strong>Step 5</strong>: Using R's merge() function, join the smaller subset with the NAICS list this will add readable industry descriptions for each NAICS code in the subset data frame.</p>
+	<ul>
+	<li>Again, the column name "Var1" is automatically created by the table function.</li> 
+	</ul>
+	<p><code>subfrm_with_naics <- merge(naics_description, naics_cnt_subfrm, by.x = "X2007.NAICS.Code", by.y = "Var1")</code></p>
+	
+	<p><strong>Step 6</strong>: Plot the recently merged subset using more descriptive titles for each axis.</p>
+	<ul>
+	<li>The weight=Freq parameter tells each bar how tall it should be.</li> 
+	</ul>
+	<p><code>qplot(factor(X2007.NAICS.Code), data=subfrm_with_naics, geom="bar", fill=factor(X2007.NAICS.Title), weight=Freq)+scale_x_discrete("NAICS Industry Code")+scale_y_continuous("Number of Release Events")</code></p>
+
+	<h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/most_toxic_releases.png" class="thickbox"><img src="/images/ggplot2/most_toxic_releases_fitted.png" alt="Bar chart of the industries with the most toxic release events"/></a></p>
+	
+	
+	<h3>Section 3 : Which industries released the most toxic chemicals in 2008?</h3>
+	<br />
+	<p>We'll make a another bar chart to figure this out, but setting up the data is slightly different.</p>
+	
+	<p><strong>Step 1</strong>: Sort the full 'chem' data frame by the descending amount of total releases into a new data frame.</p>
+	<p><code>ordered_tot_release <- chem[ order(-chem$Total.Releases) ,]</code></p>
+	
+	<p><strong>Step 2</strong>: Take the top 100 largest releases from the ordered data frame and create a new data frame with this selection.</p>
+	<p><code>top_releasers <- ordered_tot_release[1:100,]</code></p>
+	
+	<p><strong>Step 3</strong>: Similar to above merge the top_releasers data frame with the NAICS codes that you loaded earlier.</p>
+	<p><code>top_rel_with_naics <- merge(naics_description, top_releasers, by.x = "X2007.NAICS.Code", by.y = "Primary.NAICS")</code></p>
+	
+	<p><strong>Step 4</strong>: Plot the merged data frame using a bar chart.</p>
+	<p><code>qplot(factor(Facility.Name), data=top_rel_with_naics, geom="bar", fill=factor(X2007.NAICS.Title), weight=Total.Releases)</code></p>
+	
+	<h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/largest_toxic_releases.png" class="thickbox"><img src="/images/ggplot2/largest_toxic_releases_fitted.png" alt="Bar chart of the facilities with the largest toxic release events, color fill by industy"/></a></p>
+	
+	
+	<h3>Section 4 : Where are the facilities that had the most release events?</h3>
+	<br />
+	<p>No more bars for a bit.  To see this data we will use a map projection.  Getting the data into the proper formed proved a challenge for this section, so as a solution the task of maintaining the data was removed from R and given to a database.</p>
+	<p>For the following code to work you are going to need to have some extra software working on your computer.</p>
+	<ul>
+	<li>The R module <a href="http://cran.r-project.org/web/packages/RSQLite/">RSQLite</a> is required. It should be available from whatever mirror you use for your other R module needs.</li>
+	<li>The R module maps is also required. Check your R package manager to make sure it is installed and load-able.</li>
+	<li>It is also useful to have <a href="http://www.sqlite.org/">SQLite</a> installed separately, this gives you the option of using the SQLite shell to perform database operations.</li>
+	<li>It may also be very useful to have a SQLite GUI installed, your author used <a href="https://addons.mozilla.org/en-US/firefox/addon/5817">SQLite Manager</a> which is an addon for Firefox.</li>
+	</ul>
+	
+	<p><strong>Step 1</strong>: Create an SQLite database from your EPA data set</p>
+	<p>This might be slightly beyond the scope of this exercise, but to take advantage of the rest of the information here you will need a database file.</p>
+	<p>The easiest way is to import the file using a SQLite GUI utility to create the database,table and load the data from the text file.</p>
+	<p>It is also possible to import from the sqlite command shell but with over 100 columns in the dataset there is a lot that could go wrong when you are typing column names.</p>
+	<p>The rest of these steps will assume a database called "epa.sqlite" with one table called "tri."</p>
+	
+	<p><strong>Step 2</strong>: Load the map module, we'll need this for our projections later.</p>
+	<p><code>library(maps)</code></p>
+	
+	<p><strong>Step 3</strong>: Load the rsqlite module library, this will allow for communication between R and an SQLite database.</p>
+	<p><code>library(maps)</code></p>
+	
+	<p><strong>Step 4</strong>: Connect to the database file.</p>
+	<p><code>con <- dbConnect(SQLite(), "/users/dnfehren/Desktop/epa.sqlite")</code></p>
+	
+	<p><strong>Step 5</strong>: Create the query and send it to the database, saving the results in a variable.</p>
+	<ul>
+	<li>Each facility in the database has an ID assigned by the EPA, each time a facility releases toxic chemicals it is recorded in this dataset, each occurrence of an ID is then the same as an toxic release event.</p>
+	<li>This query first groups the database rows by their facility ID,</li>
+	<li>then, it counts the groups, retaining only groups with more than 25 members,<li>
+	<li>then, it returns that count as well as the facility name, ID, latitude and longitude for each retained ID</li>
+	</ul>
+	<p><code>event_mapping_query <- dbSendQuery(con, statement = "SELECT count(*) AS count, Facility_Name AS name, TRI_Facility_ID AS id, Latitude AS latitude, Longitude AS longitude FROM tri GROUP BY TRI_Facility_ID HAVING count(*) > 25 ORDER BY count(*) DESC");</code></p>
+	
+	<p><strong>Step 6</strong>: Get the data out of the query response object and into a dataframe</p>
+	<ul>
+	<li>The "n = -1" is an option used to override the default limit of 500 row that RSQLite places on the fetch function.</li> 
+	</ul>
+	<p><code>event_mapping_return <- fetch(event_mapping_query, n = -1)</code></p>
+	
+	<p><strong>Step 7</strong>: The query returned its data a characters, to use the mapping module we need the relevant data to be numeric.</p>
+	<p><code>event_mapping_return$count <- as.numeric(event_mapping_return$count)</code></p>
+	<p><code>event_mapping_return$longitude <-as.numeric(event_mapping_return$longitude)</code></p>
+	<p><code>event_mapping_return$latitude <-as.numeric(event_mapping_return$latitude)</code></p>
+	
+	<p><strong>Step 8</strong>: Create a scatter plot of the data, with size of the point related to the count of toxic events, then overlay it on a projection of the United States.</p>
+	<ul>
+	<li>Based on an example found on <a href="http://had.co.nz/stat405/resources/drills/ggplot2.html">a page of ggplot2 exercises</a>.</li> 
+	</ul>
+	<p><code>ggplot(event_mapping_return, aes(longitude, latitude)) + borders("state") + geom_point(aes(size = count))</code></p>
+	
+	<h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/number_of_releases.png" class="thickbox"><img src="/images/ggplot2/number_of_releases_fitted.png" alt="Map of United States overlayed with plot of the facilities with the most frequent toxic releases"/></a></p>
+	
+	
+	<h3>Section 5 : Where are the facilities that had the largest release events?</h3>
+	<br />
+	<p>This is similar to the last section, it also uses the database and the map projection, so you will still need those modules loaded.</p>
+	
+	<p><strong>Step 1</strong>: Assuming you are still connected to the database, this query will return the top 100 largest release events as shown in the Total_Releases column.</p>
+	<ul>
+	<li>Thanks very much to <a href="http://marc.info/?l=sqlite-users&m=112245536902335">Dan Kennedy</a> who posted a tip to use some.column.name+0.0 in the query to allow for numeric sorting on a column of text data.</li> 
+	</ul>
+	<p><code>quant_mapping_query <- dbSendQuery(con, statement = "SELECT Total_Releases AS tot_rel, TRI_Facility_ID AS id, Latitude AS latitude, Longitude AS longitude, ST AS state FROM tri ORDER BY Total_Releases +0.0 DESC LIMIT 100");</code></p>
+	
+	<p><strong>Step 2</strong>: Get the query data into a data frame.</p>
+	<p><code>quant_mapping_return <- fetch(quant_mapping_query, n = -1)</code></p>
+	
+	<p><strong>Step 3</strong>: Convert text columns into numeric columns, add them back to the data frame.</p>
+	<p><code>quant_mapping_return$tot_rel <- as.numeric(quant_mapping_return$tot_rel)</code></p>
+	<p><code>quant_mapping_return$longitude <-as.numeric(quant_mapping_return$longitude)</code></p>
+	<p><code>quant_mapping_return$latitude <-as.numeric(quant_mapping_return$latitude)</code></p>
+	
+	<p><strong>Step 4</strong>: Plot the data.</p>
+	<p><code>ggplot(quant_mapping_return, aes(longitude, latitude)) + borders("state") + geom_point(aes(size = tot_rel))</code></p>
+	
+	<h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/events_by_quantity.png" class="thickbox"><img src="/images/ggplot2/events_by_quantity_fitted.png" alt="Map of US overlayed with dots scaled according to size of toxic release"/></a></p>
+	
+    <h3>Conclusions</h3>
+    
+    <p>From the first two charts it looks like both mining and the fossil fuel industry are the biggest culprits when it comes to releasing toxic checmicals into the environment.</p>
+    
+    <p>Fossil fuel facilities have more frequent releases but mining facilities release larger ammounts of chemicals when they happen.</p>
+    
+    <p>The geographic distribution is not as clear cut.  The prevalance of events on the Gulf Coast probably reflect the high density of oil refineries located there.  Also though it is not shown in outline on the map the largest release event of 2008 took place in Alasksa, another center for fossil fuel extraction and processing.</p>
+	
+    <h3>Section 6 : How dangerous are spills as they get bigger?</h3>
+    <br />
+	<p>This is a little more abstract.  In this part we will attempt to see what kind of chemicals are dumped and how dangerous they might be.</p>
+    <p>The EPA provides a couple of useful categories to help determin this, one is the Classification of the chemical PCB, Non-PCB and Dioxin as well as if the chemical is a Carcinogen.</p>
+    <p>To take a closer look we will plot the frequencies of Classifications and Carcinogens for different categories of total release size</p>
+    
+    
+    <p><strong>Step 1</strong>: Send a query that removes a handful of really huge release events from the top of the dataset and fetch the data back into R.</p>
+	<p><code>useful_releases_query <- dbSendQuery(con, statement = "SELECT * FROM tri WHERE Total_Releases+0.0 < 50000000 ORDER BY Total_Releases+0.0 DESC");</code></p>
+	<p><code>return <- fetch(useful_releases_query, n = -1)</p></code>
+
+	<p><strong>Step 2</strong>: Reclass the Total_Release column as numeric.</p>
+	<p><code>return$Total_Releases <-as.numeric(return$Total_Releases)</p></code>
+
+	<p><strong>Step 3</strong>: Create a lable vector to use in the cut fuction</p>
+	<p><code>label_holder = c("1","2","3","4","5","6","7","8","9","10")</p></code>
+
+	<p><strong>Step 4</strong>: Cut the Total_Releases into 10 parts, use the above vector to lable the new break factors and set ordered to true.</p>
+	<p><code>return$Total_Releases <- cut(return$Total_Releases, breaks=10, labels = label_holder, ordered_result=TRUE)</p></code>
+
+	<p><strong>Step 5</strong>: Create levels in the Classification and Carcinogen columns based on the values in the column.</p>
+	<p><code>levels(return$Classification) <- c("NON-PCB","PCB","DIOXIN")</p></code>
+	<p><code>levels(return$Carcinogen) <- c("YES", "NO")</p></code>
+
+	<p><strong>Step 6</strong>: Create a table cross tabluating Classification, Caricenogen and Total Releases and force it into a dataframe.</p>
+	<p><code>combo_table <- as.data.frame(table(return$Classification, return$Total_Releases, return$Carcinogen))</p></code>
+
+	<p><strong>Step 7</strong>: Rename the columns of the dataframe</p>
+	<p><code>colnames(combo_table) <- c("classification","release_size","carcinogen","freq")</p></code>
+
+	<p><strong>Step 8</strong>: Plot all of the data, jittered to better show the points.</p>
+	<p><code>p <- ggplot(combo_table, aes(factor(release_size), freq))</p></code>
+	<p><code>p + geom_point(aes(colour = factor(classification), shape = factor(carcinogen)), position="jitter")</p></code>
+
+	<h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/chem_types.png" class="thickbox"><img src="/images/ggplot2/chem_types_fitted.png" alt="Point plot of chemical spills by classification/carcinogen and size"/></a></p>
+
+	<p><strong>Step 9</strong>: Most the frequencies are below 15, reducing the scale and replotting shows more useful variation.</p>
+	<p><code>p <- ggplot(combo_table, aes(factor(release_size), freq))<\p><\code>
+	<p><code>p + geom_point(aes(colour = factor(classification), shape = factor(carcinogen)), position="jitter")+ scale_y_continuous(limits=c(0, 15))<\p><\code>
+    
+    <h4>Image</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/chem_type_ymax15.png" class="thickbox"><img src="/images/ggplot2/chem_type_ymax15_fitted.png" alt="Point plot of chemical spills by classification/carcinogen and size"/></a></p>
+    
+	<h3>Files</h3>
+	
+	<p><a href="/projects/epa_analysis/part2/exploration.r">Exploration R Script</a> this can be loaded in R and used to reproduce this exercise's commands.</p>
+	
+	<p><a href="/projects/epa_analysis/part1/tri_2008_US_v08.zip">Zip compressed tab-delimited text file of the EPA data.</a></p>
+
+	<p><a href="/projects/epa_analysis/part2/naics07.csv">NAICS codes and description .csv file.</a></p>
+
+	<p><a href="/projects/epa_analysis/part2/TRI_08_csv_db_clean.zip">Zipped EPA data in .csv with column names cleaned for database entry.</a></p>
+	
+	<p><a href="/projects/epa_analysis/part2/TRI_08_tab_db_clean.zip">Zipped EPA data in tab-delimited .txt with clean(-ish) columns for database.</a></p>
+	
+	<p><a href="/projects/epa_analysis/part2/epa.sqlite">SQLite database file of EPA data.</a></p>
+</div>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-15230053-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

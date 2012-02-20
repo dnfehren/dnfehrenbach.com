@@ -1,0 +1,135 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+<script type="text/javascript" src="/site_code/jquery.js"></script>
+<script type="text/javascript" src="/site_code/thickbox.js"></script>
+
+<title>Daniel Fehrenbach : EPA Toxic Release Data Set : Part 6</title>
+<style type="text/css" media="screen">
+@import "/general.css";
+</style>
+</head>
+
+
+
+
+<body>
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/">Front</a> | 
+		<a href="http://dnfehrenbach.com/resume.html">Resume</a> | 
+		<a href="http://dnfehrenbach.com/projects.html">Data Analysis and Applications</a> | 
+		<a href="http://dnfehrenbach.com/education.html">MSI Course Work</a> | 
+		<a href="http://dnfehrenbach.com/writings.html">Writings</a> | 
+		<a href="http://dnfehrenbach.com/contact.html">Contact</a>
+	</p>
+</div>
+
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part1/part1.html">Part 1 : Pie</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part2/part2.html">Part 2 : Exploration</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part3/part3.html">Part 3 : Factors</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part4/part4.html">Part 4 : Layers</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part5/part5.html">Part 5 : Geoms/Stats</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part6/part6.html">Part 6 : Polishing</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part7/part7.html">Part 7 : Final Thoughts</a>
+	</p>
+</div>
+
+<div id="Content">
+	<h1>: EPA TRI Data Analysis : Part 6</h1>
+	<h2>Polishing Plots</h2>
+	
+	<p>Standard beginning, querying the large EPA databases for a set of columns, factoring it and then loading a new set of data that holds poverty statistics for all US counties.</p>
+	
+	<p><strong>Step 1</strong>: Load the ggplot and rsqlite libraries.</p>
+	<p><code>library(ggplo2)</code></p>
+	<p><code>library(RSQLite)</code></p>
+    
+    <p><strong>Step 2</strong>: Load the function to add region data to the dataframe based on state name abbreviations.<p>
+    <p><code>source(file = "C:\\Users\\dnfehren\\Desktop\\final_asm\\regionalize.RData")</code></p>
+	
+	<p><strong>Step 3</strong>: Connect to database.<p>
+	<p><code>con <- dbConnect(SQLite(), "C:\\Users\\dnfehren\\Desktop\\epa.sqlite")</code></p>
+	
+	<p><strong>Step 4</strong>: Send query and fetch result.</p>
+	<p><code>query <- dbSendQuery(con, statement = "SELECT year, facility_state, facility_county, (total_air+total_surface_water+total_underground_water+total_land) AS total_release FROM tri")</code><</p>
+
+	<p><code>ret <- fetch(query, n = -1)</code></p>
+    
+    <p><strong>Step 5</strong>: Factor the year, region and facility state columns from the new data frame.</p>
+    #factor year, states and regions
+	<p><code>factor(releases$year)</code></p>
+	<p><code>factor(releases$region)</code></p>
+	<p><code>factor(releases$facility_state)</code></p>
+
+	<p><strong>Step 6</strong>: Load the poverty csv into an R data frame.</p>
+    <p><code>pov <- read.csv("C:\\Users\\dnfehren\\Desktop\\final_asm\\poverty_data.csv")</code></p>
+
+	
+	<h3>Section 2 : Create specific data frame for the state of Michigan</h3>
+	<br>
+    <p><strong>Step 1</strong>: Subset the two large dataframes, only grabbing MI rows.</p>
+	<p><code>mi_pov <- subset(pov, state == "MI")</code></p>
+	<p><code>mi_rel <- subset(releases, facility_state == "MI")</code></p>
+    
+    <p><strong>Step 2</strong>: Tabulate the occurences of release by year and county.</p>
+	<p><code>mi_tab <- as.data.frame(table(mi_rel$year, mi_rel$facility_county))</code></p>
+	<p><code>colnames(mi_tab) <- c("year","county", "freq")</code></p>
+    
+    <p><strong>Step 3</strong>: Merge the tabulated results with the poverty data.</p>
+	<p><code>mi_mrg <- merge(mi_tab, mi_pov, by.x = c("county","year"), by.y = c("county_name","year"))</code></p>
+	
+    <p><strong>Step 4</strong>: Remove the factors that were automatically applied when the frame was tabulated.</p>
+	<p><code>mi_mrg$all_age_pov_percent <- as.numeric(as.character(mi_mrg$all_age_pov_percent))</code></p>
+    
+	<h3>Section 3 : Create the plot, adding polishing elements.</h3>
+	<br>
+   
+    <p><strong>Step 1</strong>: Set data frame based on tablulated and merged table.</p>
+	<p><code>mi_rel_freq <- ggplot(mi_mrg)</code></p>
+    
+    <p><strong>Step 2</strong>: Create the initial plot.</p>
+	<p><code>mi_rel_freq <- mi_rel_freq + geom_point(aes(all_age_pov_percent,freq, color=year))</code></p>
+    
+    <p>Click for larger images</p>
+	<p><a href="/images/ggplot2/rel_and_pov_1.png" class="thickbox"><img src="/images/ggplot2/rel_and_pov_1_fitted.png" alt="rel_and_pov1"/></a></p>
+    
+    <p><strong>Step 3</strong>: Change the colors of the points in the plot to better reflect progression of time.</p>
+	<p><code>mi_rel_freq <- mi_rel_freq + scale_colour_manual("Year", values = c("1999"="#F7FBFF", "2000"="#DEEBF7", "2001"="#C6DBEF", "2002"="#9ECAE1", "2003"="#6BAED6", "2004"="#4292C6", "2005"="#2171B5", "2006"="#08519C", "2007"="#08306B", "2008"="#06234D"))</code></p>
+    
+    <p>Click for larger images</p>
+	<p><a href="/images/ggplot2/rel_and_pov_2.png" class="thickbox"><img src="/images/ggplot2/rel_and_pov_2_fitted.png" alt="rel_and_pov2"/></a></p>
+    
+    <p><strong>Step 4</strong>: Add titles for the plot, the axes, and edit the title of the legend.</p>
+	<p><code>mi_rel_freq <- mi_rel_freq + opts(title = "Connecting poverty rates and number of toxic releases in MI counties") + scale_x_continuous("Percent of Total Population Below Poverty Line") + scale_y_continuous("Number of Toxic Release Events")</code></p>
+    
+    <p>Click for larger images</p>
+	<p><a href="/images/ggplot2/rel_and_pov_3.png" class="thickbox"><img src="/images/ggplot2/rel_and_pov_3_fitted.png" alt="rel_and_pov3"/></a></p>
+    
+	<h3>Files</h3>
+	
+	<p><a href="/projects/epa_analysis/part6/plot_fixing.r">R Script</a> this can be loaded in R and used to reproduce this exercise's commands.</p>
+    
+    <p><a href="/projects/epa_analysis/part6/regionalize.RData">R function</a> load this with the source() command to allow for adding regions to dataframes with state abbreviations.</p>
+	
+	<p><a href="/projects/epa_analysis/part5/epa_99_08.s3db">Custom SQLite database file of EPA data from 1999 to 2008 (~160MB).</a></p>
+</div>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-15230053-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

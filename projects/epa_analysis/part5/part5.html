@@ -1,0 +1,179 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+<script type="text/javascript" src="/site_code/jquery.js"></script>
+<script type="text/javascript" src="/site_code/thickbox.js"></script>
+
+<title>Daniel Fehrenbach : EPA Toxic Release Data Set : Part 5</title>
+<style type="text/css" media="screen">
+@import "/general.css";
+</style>
+</head>
+
+
+
+
+<body>
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/">Front</a> | 
+		<a href="http://dnfehrenbach.com/resume.html">Resume</a> | 
+		<a href="http://dnfehrenbach.com/projects.html">Data Analysis and Applications</a> | 
+		<a href="http://dnfehrenbach.com/education.html">MSI Course Work</a> | 
+		<a href="http://dnfehrenbach.com/writings.html">Writings</a> | 
+		<a href="http://dnfehrenbach.com/contact.html">Contact</a>
+	</p>
+</div>
+
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part1/part1.html">Part 1 : Pie</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part2/part2.html">Part 2 : Exploration</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part3/part3.html">Part 3 : Factors</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part4/part4.html">Part 4 : Layers</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part5/part5.html">Part 5 : Geoms/Stats</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part6/part6.html">Part 6 : Polishing</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part7/part7.html">Part 7 : Final Thoughts</a>
+	</p>
+</div>
+
+<div id="Content">
+	<h1>: EPA TRI Data Analysis : Part 5</h1>
+	<h2>Geom_ and Stat_ Objects</h2>
+	
+	<p>Another look at <a href="http://www.r-project.org/">R</a> and <a href="http://had.co.nz/ggplot/">ggplot2</a> this time with a new, much bigger dataset, and a bit more attention paid to the components of a plot.</p>
+	
+	<p>So EPA Toxic Release data used in the last 4 exercises help a lot of interesting data, but it was missing something important, any information about time.  All of the release events were from 2008, but it was not described when during that year, nor was there any indication of of trends over time.</p>
+    
+    <p>To remedy this situation I have taken it upon myself to consolidate the last 10 epa TRI datasets into one, very large, database.  This new database is only the essential information about each event, the facility information, the location, the chemical and its associated data (if available) and the amounts.  A lot of the data that makes the TRI data sets so rich have been removed to save space and to account for the EPA's changing reporting structure each year.</p>
+    
+    <p>To create the new database, the last 10 datasets were downloaded, extracted using their build in self-extract tools (which the EPA should know, really inconveniences Mac OS and Linux users), edited to remove non-standard columns, combined into one massive .csv file and the imported into a sqlite3 database.</p>
+    
+    <p>For those looking to repeat the steps to create your own a couple of tips: beware of stray punctuation, chemical names hid all sorts of things that will break your database syntax; keep careful track of changing labels for columns between years, especially for totals and finally, bring some snacks, the database import of the csv, which weighed in around 140 MB, took around 3 hours (each time, I had to do it twice - see tip 1) on a Quad-Core Pentium with 4GB RAM.  This is probably more of a problem with the GUI interfaces for SQLite than the database itself, and so it may speed up if you use the command line, but caveat importer.</p>
+    
+    <p>The new database has around 900,000 rows of toxic release data, and will be available for download in the files section of this page.</p>
+    
+    <p>The R code for this part may seem a little sparse but the objective is to explore the new time dimension in the data while demonstrating the power of the ggplot geom objects to rapidly show many different views on the data.</p>
+	
+	<h3>Section 1 : Preparing the R workspace</h3>
+	<br>
+	<p>Like earlier exercise the initial steps will involve connecting to a SQLite database and drawing out some specific columns, namely those dealing with release types.</p>
+	
+	<p><strong>Step 1</strong>: Load the ggplot and rsqlite libraries.</p>
+	<p><code>library(ggplo2)</code></p>
+	<p><code>library(RSQLite)</code></p>
+	
+	<p><strong>Step 2</strong>: Connect to database.<p>
+	<p><code>con <- dbConnect(SQLite(), "C:\\Users\\dnfehren\\Desktop\\epa.sqlite")</code></p>
+	
+	<p><strong>Step 3</strong>: Send query and fetch result.</p>
+	<p><code>query <- dbSendQuery(con, statement = "SELECT tri_id, year, facility_state FROM tri")</code><</p>
+
+	<p><code>return <- fetch(query, n = -1)</code></p>
+	
+	<h3>Section 2 : This is a bit of dodge around what might be more elegant functions in R, but the following code is used to split the data into regions based on the US Census regions (with an additional region for Alaska) and provide a identifying column in the database.</h3>
+	<br>
+    
+    <p>A simple map of the census regions is available <a href="http://www.eia.doe.gov/emeu/reps/maps/us_census.html" target="_blank">here</a>.</p>
+    
+	<p>This will involve some subsetting the main dataframe based on the states within each region, adding a region column, and then combining all of the parts back together.</p>
+    
+    <p>Eventually this region information might make it in to the database proper, if it does I will update this page to reflect the change.</p>
+
+	<p><strong>Step 1</strong>: Subset the dataframe based on the regions in each state, add a new column called "region" with the name of the region.</p>
+	<p><code>akl <- subset(ret, ret$facility_state == "AK")</code></p>
+	<p><code>akl$region <- "ALASKA"</code></p>
+	
+    <p><code>pil <- subset(ret, ret$facility_state == "HI" | ret$facility_state == "AS" | ret$facility_state =="GU" | ret$facility_state =="MP" | ret$facility_state =="PR" | ret$facility_state =="VI")</code></p>
+    <p><code>pil$region <- "PACIFIC ISLANDS"</code></p>
+    
+    <p><code>pac <- subset(ret, ret$facility_state == "CA" | ret$facility_state == "OR" | ret$facility_state == "WA")</code></p>
+    <p><code>pac$region <- "PACIFIC"</code></p>
+    
+    <p><code>mtn <- subset(ret, ret$facility_state == "MT" | ret$facility_state == "ID" | ret$facility_state == "NV" | ret$facility_state == "WY" | ret$facility_state == "UT" | ret$facility_state == "CO" | ret$facility_state == "AZ" | ret$facility_state == "NM")</code></p>
+	<p><code>mtn$region <- "MOUNTAIN"</code></p>
+    
+    <p><code>wnc <- subset(ret, ret$facility_state == "ND" | ret$facility_state == "MN" | ret$facility_state == "SD" | ret$facility_state == "IA" | ret$facility_state == "NE" | ret$facility_state == "KS" | ret$facility_state == "MO")</code></p>
+	<p><code>wnc$region <- "WEST NORTH CENTRAL"</code></p>
+    
+    <p><code>wsc <- subset(ret, ret$facility_state == "OK" | ret$facility_state == "AR" | ret$facility_state == "TX" | ret$facility_state == "LA")</code></p>
+    <p><code>wsc$region <- "WEST SOUTH CENTRAL"</code></p>
+    
+    <p><code>enc <- subset(ret, ret$facility_state == "WI" | ret$facility_state == "MI" | ret$facility_state == "IL" | ret$facility_state == "IN" | ret$facility_state == "OH")</code></p>
+    <p><code>enc$region <- "EAST NORTH CENTRAL"</code></p>
+    
+    <p><code>esc <- subset(ret, ret$facility_state == "KY" | ret$facility_state == "TN" | ret$facility_state == "MS" | ret$facility_state == "AL")</code></p>
+    <p><code>esc$region <- "EAST SOUTH CENTRAL"</code></p>
+    
+    <p><code>ngl <- subset(ret, ret$facility_state == "ME" | ret$facility_state == "VT" | ret$facility_state == "NH" | ret$facility_state == "MA" | ret$facility_state == "RI" | ret$facility_state == "CT")</code></p>
+    <p><code>ngl$region <- "NEW ENGLAND"</code></p>
+    
+    <p><code>mat <- subset(ret, ret$facility_state == "NY" | ret$facility_state == "NJ" | ret$facility_state == "PA")</code></p>
+    <p><code>mat$region <- "MID ATLANTIC"</code></p>
+    
+    <p><code>sat <- subset(ret, ret$facility_state == "MD" | ret$facility_state == "DE" | ret$facility_state == "DC" | ret$facility_state == "WV" | ret$facility_state == "VA" | ret$facility_state == "NC" | ret$facility_state == "SC" | ret$facility_state == "GA" | ret$facility_state == "FL")</code></p>
+ 	<p><code>sat$region <- "SOUTH ATLANTIC"</code></p>
+
+    <p><strong>Step 2</strong>: Recombine all of the dataframes by row.</p>
+    <p><code>rel_regions <- rbind(akl,pil,pac,mtn,wnc,wsc,enc,esc,ngl,mat,sat)</code></p>
+  
+	<h3>Section 3 : Plotting with geoms.</h3>
+	<br>
+	<p>Now that we have this huge data set, what does it look like?</p>
+    
+    <p><strong>Step 1</strong>: Set the ggplot object to use the combined data frame as its data source.</p>
+    <p><code>plot <- ggplot(rel_regions)</code></p>
+    
+    <p><strong>Step 2</strong>: Plot: Histogram of the overall dataset, where did the most release events occur in the last 10 year.</p>
+	<p><code>plot + geom_histogram(aes(region))</code></p>
+    
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/large_data_histogram.png" class="thickbox"><img src="/images/ggplot2/large_data_histogram_fitted.png" alt="Histogram of the overall dataset"/></a></p>
+    
+    <p>So it looks like for the 10 reporting sessions up to 2008 the East North Central region had the most release events.  There are fairly heavily population Great Lakes states and the homes of a great deal of the US heavy industry, so the count is not surprising. The South Atlantic and West South Central appear to be tied for second.  The West South Central includes TX and LA two stats that are heavily involved in the petroleum industry, so the elevated amount of releases is expected.  The South Atlantic makes less sense with regard to its prominence and will probably require more research.</p> 
+    
+    <p><strong>Step 3</strong>: Plot: Density plot of the full dataset, where did events occur in a great density?</p>
+	<p><code>plot + geom_density(aes(region, fill = region))</code></p>
+    
+    <p>Click for larger images</p>
+	<p><a href="/images/ggplot2/large_data_density.png" class="thickbox"><img src="/images/ggplot2/large_data_density_fitted.png" alt="Density plot of the full dataset"/></a></p>
+    
+    <p>Several interesting things appear in this plot which uses the stat_density attributes of ggplot to create smoothed frequency plots for the data.  The first, odd though inconsequential, is that the densities appear to progress in near alphabetical order, not significant but still.  The more surprising element of the graph is the very large spike seen for Alaska which although it has a low number of releases comparatively has them in greater density.</p>
+      
+    <p><strong>Step 4</strong>: Plot: This is sort of a 2d histogram, the count of each combination of region and year in the dataset is plotted using color blocks.</p>
+	<p><code>plot + geom_bin2d(aes(factor(year),factor(region)))</code></p>
+    
+    <p>This plot does not hold as many surprises as the density plot, but does contain a lot of information about the releases between 1999 and 2008.  One important thing to notice is that the deep red indicating the highest number of releases across the ten periods is not for Alaska, but for the East North Central.  Though the changes are slight, in this version of the plot it does appear that all regions have had slight decreases in the number of releases.  Refinements to this plot should use the stat_bin options to modify the binning procedures that produce each year and regions data points.</p>
+    
+    <p>Click for larger images</p>
+	<p><a href="/images/ggplot2/large_data_per_year_per_region.png" class="thickbox"><img src="/images/ggplot2/large_data_per_year_per_region_fitted.png" alt="count of each combination of region and year in the dataset"/></a></p>
+    
+    <p><strong>Step 5</strong>: Plot: 2d histogram, this time using hex's instead of squares.</p>
+	<p><code>coming soon</code></p>
+    
+    <p><strong>Step 6</strong>: Plot: Line plot.</p>
+	<p><code>coming soon</code></p>
+    
+	<h3>Files</h3>
+	
+	<p><a href="/projects/epa_analysis/part5/r_code/stats_geoms.r">R Script</a> this can be loaded in R and used to reproduce this exercise's commands.</p>
+	
+	<p><a href="/projects/epa_analysis/part5/epa_99_08.s3db">Custom SQLite database file of EPA data from 1999 to 2008 (~160MB).</a></p>
+</div>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-15230053-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

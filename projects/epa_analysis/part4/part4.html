@@ -1,0 +1,169 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+<script type="text/javascript" src="/site_code/jquery.js"></script>
+<script type="text/javascript" src="/site_code/thickbox.js"></script>
+
+<title>Daniel Fehrenbach : EPA Toxic Release Data Set : Part 4</title>
+<style type="text/css" media="screen">
+@import "/general.css";
+</style>
+</head>
+
+
+
+
+<body>
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/">Front</a> | 
+		<a href="http://dnfehrenbach.com/resume.html">Resume</a> | 
+		<a href="http://dnfehrenbach.com/projects.html">Data Analysis and Applications</a> | 
+		<a href="http://dnfehrenbach.com/education.html">MSI Course Work</a> | 
+		<a href="http://dnfehrenbach.com/writings.html">Writings</a> | 
+		<a href="http://dnfehrenbach.com/contact.html">Contact</a>
+	</p>
+</div>
+
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part1/part1.html">Part 1 : Pie</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part2/part2.html">Part 2 : Exploration</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part3/part3.html">Part 3 : Factors</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part4/part4.html">Part 4 : Layers</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part5/part5.html">Part 5 : Geoms/Stats</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part6/part6.html">Part 6 : Polishing</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part7/part7.html">Part 7 : Final Thoughts</a>
+	</p>
+</div>
+
+<div id="Content">
+	<h1>: EPA TRI Data Analysis : Part 4</h1>
+	<h2>Layers</h2>
+	
+	<p>Another look at <a href="http://www.r-project.org/">R</a> and <a href="http://had.co.nz/ggplot/">ggplot2</a> this time to see how companies are releasing toxic materials.</p>
+	
+	<p>The EPA Toxic Release data set has a lot of data describing how chemicals were releases or during what business process they were released.</p>
+	
+	<h3>Section 1 : Preparing the R workspace</h3>
+	<br>
+	<p>Like earlier exercise the initial steps will involve connecting to a SQLite database and drawing out some specific columns, namely those dealing with release types.</p>
+	
+	<p><strong>Step 1</strong>: Load the ggplot and rsqlite libraries.</p>
+	<p><code>library(ggplo2)</code></p>
+	<p><code>library(RSQLite)</code></p>
+	
+	<p><strong>Step 2</strong>: Connect to database.<p>
+	<p><code>con <- dbConnect(SQLite(), "C:\\Users\\dnfehren\\Desktop\\epa.sqlite")</code></p>
+	
+	<p><strong>Step 3</strong>: Send query and fetch result.</p>
+	<p><code>query <- dbSendQuery(con, statement = "SELECT TRI_FACILITY_ID,Fugitive_Air,Stack_Air,Water,Underground_Class_I,Underground_Class_II_V,RCRA_C_Landfills,Other_Landfills,Land_Treatment,Surface_Impoundment,RCRA_C_Surface_Impoundment,Other_Surface_Impoundment,Other_Disposal,POTW_Total_Transfers,M10,M41,M62,M71,M81,M82,M72,M63,M66,M67,M64,M65,M73,M79,M90,M94,M99,M20,M24,M26,M28,M93,M56,M92,M40,M50,M54,M61,M69,M95 FROM tri");</code><</p>
+
+	<p><code>return <- fetch(query, n = -1)</code></p>
+	
+	<h3>Section 2 : Reform the data, splitting on and off site release types.</h3>
+	<br>
+	<p>This will involve some subsetting data frames as well as the melt function to create new data structures that can be plotted</p>
+
+	<p><strong>Step 1</strong>: Grab the on site types of release from the query return and then rename the columns with easier labels.</p>
+	<p><code>on_site_wide <- return[c("TRI_Facility_ID","Fugitive_Air","Stack_Air","Water","Underground_Class_I","Underground_Class_II_V","RCRA_C_Landfills","Other_Landfills","Land_Treatment","Surface_Impoundment","RCRA_C_Surface_Impoundment","Other_Surface_Impoundment","Other_Disposal")]</code></p>
+	<p><code>names(on_site_wide) <- c("Facility ID","Air Leak","Air Release", "Water", "Strict Well", "Other Well", "Strict Landfill", "Other Landfill", "Soil", "Surface Holding", "Strict Surface Holding","Other Surface","Other")</code></p>
+
+	<p><strong>Step 2</strong>: Grab the off site types of release from the query return and then rename the columns with easier labels.</p>
+	<p><code>off_site_wide <- return[c("TRI_Facility_ID","POTW_Total_Transfers","M10","M41","M62","M71","M72","M63","M64","M65","M73","M79","M90","M94","M99")]</code></p>
+	<p><code>names(off_site_wide) <- c("Facility ID","OS POTW","OS Storage","OS Solidification","OS WasteWater Treatment", "OS Well", "OS Old Well Data", "OS Surface", "OS Landfill", "OS Strict Landfill", "OS Soil", "OS Other Surface","OS Other", "Waste Broker", "Unknown")</code></p>
+
+	<p><strong>Step 3</strong>: Use the melt() command to reshape the data frames from their "wide" forms to "long" forms where each column is given a single row and variable.</p>
+	<ul>
+	<li>The id=1 parameter uses the facility ID column as the column by which the melter reshapes the table, each other variable combination will be given a single row.</li> 
+	</ul>
+	<p><code>on_site_full <- melt.data.frame(on_site_wide, id=1)</code></p>
+	<p><code>off_site_full <- melt.data.frame(off_site_wide, id=1)</code></p>
+
+	<p><strong>Step 4</strong>: The data set has a lot of zeros, here the subset() function removes them</p>
+	<p><code>on_site <- subset(on_site_full, on_site_full$value != 0)</code></p>
+	<p><code>off_site <- subset(off_site_full, off_site_full$value != 0)</code></p>
+	
+	<p><strong>Step 5</strong>:  Use qplot to create some simple histograms to see the relative counts of release events.</p>
+	<p><code>qplot(variable, data=on_site, geom="histogram") </code></p>
+	<p><code>qplot(variable, data=off_site, geom="histogram") </code></p>
+	
+	<h4>Images</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/on_site_release_histogram.png" class="thickbox"><img src="/images/ggplot2/on_site_release_histogram_fitted.png" alt="Histogram of on site release types"/></a></p>
+	<p><a href="/images/ggplot2/off_site_release_histogram.png" class="thickbox"><img src="/images/ggplot2/off_site_release_histogram_fitted.png" alt="Histogram of off site release types"/></a></p>
+	
+    <h4>Thoughts</h4>
+    <p>So it appears that most of the on site releases happen into the air, either by leaks and accidents or specific venting events.  Off site releases look to most commonly involve shipping materials to publicly owned treatment works or to landfills.  These make sense, most businesses do not have waste treatment facilities on site and would need outside organizations to deal with it.</p>
+    
+	<h3>Section 3 : Create new a new dataframe to more directly compare on and off site release events.</h3>
+	<br>
+	<p>The new frames are based on the counts for each variable in the melted dataframes created above and used to create more specific plots than the histograms.</p>
+	
+	<p><strong>Step 1</strong>: Tabulate on and off site variables and then combine the tables into a new data frame.</p>
+	<p><code>on_df <- as.data.frame(table(on_site$variable))</code></p>
+	<p><code>off_df <- as.data.frame(table(off_site$variable))</code></p>
+	<p><code>combo_df <- rbind(on_df,off_df)</code></p>
+	<p><code>names(combo_df) <- c("type","count")</code></p>
+	
+	<p><strong>Step 2</strong>: Pull out the similar release event types from the combined table and add a new column with labels for site type.</p>
+	<p><code>similar_methods <- combo_df[c(6,21,7,20,8,22,11,23),]</p></code>
+	<p><code>similar_methods["site"] <- c("on","off","on","off","on","off","on","off")</p></code>
+	
+	<h3>Section 4 : Create a plot from the similar release type dataframes.  This will be done through the creation of multiple layers of the plot rather than the one step qplots shown above.</h3>
+	<br>
+	<p>A bar plot should make it easier to compare the types of releases, and perhaps show if releases on or off site are more frequent.</p>
+	
+	<p><strong>Step 1</strong>: Create the initial ggplot object and define the data that the plot will be built from.</p>
+	<p><code>p <- ggplot(similar_methods)</code></p>
+	
+    <p><img src="/images/ggplot2/layerhw_step_1.png" alt="empty plot window"/></p>
+    
+	<p><strong>Step 2</strong>: There is nothing in that plot, we need to apply the aesthetic layer, which defines the x-axis of the plot as using the factorization of the type column from the dataframe.</p>
+	<p><code>p <- p + aes(factor(type))</code></p>
+	
+    <p><img src="/images/ggplot2/layerhw_step_2.png" alt="empty plot window"/></p>
+    
+	<p><strong>Step 3</strong>: That plot doesn't look right, it is only showing the presence of each variable, we don't need that as we have count data in our frame already.  To use the count column the <code>weight</code> parameter of the plot must be set to use count column from the dataframe.</p>
+	<p><code>p <- p + aes(factor(type), weight = count)</code></p>
+	
+    <p><img src="/images/ggplot2/layerhw_step_3.png" alt="empty plot window"/></p>
+    
+	<p><strong>Step 4</strong>: Looks closer but there is no differentiation between on and off site.  This can be done by applying a further aesthetic map to the data, using the site column data in the <code>fill</code> parameter to color in the values based on the site type.</p>
+	<p><code>p <- p + aes(factor(type), fill = factor(site))</code></p>
+	
+    <p><img src="/images/ggplot2/layerhw_step_4.png" alt="empty plot window"/></p>
+    
+	<p><strong>Step 5</strong>: That's much better but the stacking makes it hard to read.  As a final step we will set set the bar plots <code>position</code> parameter to "dodge" which will place columns with the same factor side by side.</p>
+	<p><code>p + geom_bar(position="dodge")</code></p>
+	
+	<h4>Images</h4>
+	<p>Click for larger images</p>
+	<p><a href="/images/ggplot2/comparison_barchart.png" class="thickbox"><img src="/images/ggplot2/comparison_barchart_fitted.png" alt="Bar chart release types that are similar across on and off site"/></a></p>
+	
+    <h4>Conclusions</h4>
+    <p>It seems as though a substantial number of release events occur into the air and cannot be controlled by either the organization responsible for the event or an outside partner called in to deal with waste products or toxic materials.  Also, the dramatically lower usage numbers for landfills, wells and surface treatment areas that fall under the more strict <a href="http://www.epa.gov/epawaste/inforesources/online/" title="RCRA site" target="_blank">RCRA Class C</a> category and the high numbers of "unknown" and "other" release events speaks to the relatively uncontrolled nature of toxic releases despite the reporting system.</p>
+    
+	<h3>Files</h3>
+	
+	<p><a href="/projects/epa_analysis/part4/layers.r">R Script</a> this can be loaded in R and used to reproduce this exercise's commands.</p>
+	
+	<p><a href="/projects/epa_analysis/part2/epa.sqlite">SQLite database file of EPA data.</a></p>
+</div>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-15230053-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

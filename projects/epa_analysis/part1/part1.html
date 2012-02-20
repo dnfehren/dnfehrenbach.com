@@ -1,0 +1,141 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+<script type="text/javascript" src="/site_code/jquery.js"></script>
+<script type="text/javascript" src="/site_code/thickbox.js"></script>
+
+<title>Daniel Fehrenbach : EPA Toxic Resease Data Set : Part 1</title>
+<style type="text/css" media="screen">
+@import "/general.css";
+</style>
+</head>
+
+
+
+
+<body>
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/">Front</a> | 
+		<a href="http://dnfehrenbach.com/resume.html">Resume</a> | 
+		<a href="http://dnfehrenbach.com/projects.html">Data Analysis and Applications</a> | 
+		<a href="http://dnfehrenbach.com/education.html">MSI Course Work</a> | 
+		<a href="http://dnfehrenbach.com/writings.html">Writings</a> | 
+		<a href="http://dnfehrenbach.com/contact.html">Contact</a>
+	</p>
+</div>
+
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part1/part1.html">Part 1 : Pie</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part2/part2.html">Part 2 : Exploration</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part3/part3.html">Part 3 : Factors</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part4/part4.html">Part 4 : Layers</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part5/part5.html">Part 5 : Geoms/Stats</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part6/part6.html">Part 6 : Polishing</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part7/part7.html">Part 7 : Final Thoughts</a>
+	</p>
+</div>
+
+
+<div id="Content">
+	<h1>: EPA TRI Data Analysis : Part 1</h1>
+	<h2>Introduction and Making a Toxic Pie</h2>
+	
+	<p>The goal of this exercise is to demonstrate the capabilities of <a href="http://www.r-project.org/">R</a> and <a href="http://had.co.nz/ggplot/">ggplot2</a> for use in exploratory data analysis.</p>
+	
+	<p>For the analysis I have chosen a dataset from the EPA, the early version of the 2008 Toxics Release Inventory "a publicly available EPA database that contains information on toxic chemical releases and waste management activities reported annually by certain industries as well as federal facilities."</p>
+	
+	<p><a href="http://epa.gov/tri/">Click here to go the the official EPA site to find out more or download different datasets.</a></p>
+	
+	<p>The dataset comes as a tab-delimited .csv file, and can be downloaded from <a href="http://www.data.gov/raw/684">data.gov</a></p>
+	
+	<p>This dataset will be used for a series of exercises in analysis and visualization.  The results of the work, along with the commands used to achieve those results, will be posted here.</p>
+	
+	<h3>Section 1 : Preparing the Data</h3>
+	
+	<p>The data downloads into a self-extracting .zip file.  This will automatically decompress when executed on a Windows machine, on a Mac or something else you might have to do a little more work.</p>
+	
+	<p>Also, to save some time and learn from my mistakes, you should open the data sheet in Excel or another spreadsheet program and add a new column to the start of the file that will hold a unique id number for each row.</p>
+	
+	<ul>
+	<li>The row() function can come in handy here.</li>
+	<li>So can the keyboard shortcuts ctrl+shift+downarrow and ctrl+d to fill the space without endless dragging.</li>
+	</ul>
+	
+	<h3>Section 2 : Loading Data into R</h3>
+	<br>
+	<p>Step 1: Load the ggplot library (assuming it is already installed on your system).<p>
+	
+	<p><code>library(ggplo2)</code></p>
+	
+	<p>Step 2: Read the text file into a data object in R.  This command is based on a Windows version of R - Mac, Linux or other users won't have to use the double slashes.</p>
+	
+	<ul>
+	<li>The read function read.delim is used instead of the standard read.table because its defaults fit nicely with the file, no extra parameters are needed.</li> 
+	</ul>
+	
+	<p><code>chem = read.delim("C:\\Users\\dnfehren\\Desktop\\tri_2008_US_v08.txt")</code></p>
+	
+	<h3>Section 3 : Getting a sub-set of the data</h3>
+	<br>
+	<p>Step 1: Attach the data object to your R workspace, this will save some typing later.</p>
+	
+	<p><code>attach(chem)</code></p>
+	
+	<p>Step 2: Grab just the rows of the dataset that deal with Washtenaw County (or choose your own county), and assign it to a new data object.</p>
+	
+	<p><code>local_chem <- subset(chem, County == 'WASHTENAW')</code></p>
+	
+	<h3>Section 4 : Making the pie</h3>
+	<br>
+	<p>Step 1: Create the initial ggplot object by telling ggplot where your data is coming from and basic aesthetic information about the factors and fill color.</p>
+	
+	<ul>
+	<li>We are using the Chemical factor from the dataset to determine the slices of the pie, this is the name of the chemical that the entity in that row of the dataset somehow released into the environment.</li> 
+	</ul>
+	
+	<p><code>pie <- ggplot(local_chem, aes(x=factor(1), fill = factor(Chemical)))</code></p>
+	
+	<p>Step 2: A pie chart is really a bar chart mapped using polar coordinates, so the next layer of the graph adds a bar geometric element of a specific width and with a black border.</p>
+	
+	<p><code>pie = pie + geom_bar(width=5, color="black")</code></p>
+	
+	<p>Step 3: The last step is to layer the polar coordinate system on top of those bar geometries to get the appearance of a pie.  The angle of the pie slice, theta, is taken from the y coordinate in what would have been a bar chart/p>
+	
+	<p><code>pie = pie + coord_polar(theta="y")</code></p>
+	
+	<p>Step 4: display the pie</p>
+	
+	<p><code>pie</code></p>
+	
+	<h3>Images</h3>
+	
+	<p>Click for larger images</p>
+	
+	<p><a href="/images/ggplot2/chem_pie.png" class="thickbox"><img src="/images/ggplot2/chem_pie_fitted.png" alt="pie chart of chemicals dumped in Washtenaw County in 2008"/></a></p>
+	
+	<h3>Files</h3>
+	
+	<p><a href="/projects/epa_analysis/part1/pie_maker.r">Pie Maker R Script</a> this can be loaded in R and used to reproduce this exercise's commands.</p>
+	
+	<p><a href="/projects/epa_analysis/part1/tri_2008_US_v08.zip">Zip compressed tab-delimited text file of the data used in this part.</a></p>
+
+</div>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-15230053-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>

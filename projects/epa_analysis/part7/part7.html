@@ -1,0 +1,116 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+
+<script type="text/javascript" src="/site_code/jquery.js"></script>
+<script type="text/javascript" src="/site_code/thickbox.js"></script>
+
+<title>Daniel Fehrenbach : EPA Toxic Release Data Set : Part 7 : Final Thoughts</title>
+<style type="text/css" media="screen">
+@import "/general.css";
+</style>
+</head>
+
+
+
+
+<body>
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/">Front</a> | 
+		<a href="http://dnfehrenbach.com/resume.html">Resume</a> | 
+		<a href="http://dnfehrenbach.com/projects.html">Data Analysis and Applications</a> | 
+		<a href="http://dnfehrenbach.com/education.html">MSI Course Work</a> | 
+		<a href="http://dnfehrenbach.com/writings.html">Writings</a> | 
+		<a href="http://dnfehrenbach.com/contact.html">Contact</a>
+	</p>
+</div>
+
+<div id="topspacer">
+	<p>
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part1/part1.html">Part 1 : Pie</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part2/part2.html">Part 2 : Exploration</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part3/part3.html">Part 3 : Factors</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part4/part4.html">Part 4 : Layers</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part5/part5.html">Part 5 : Geoms/Stats</a> | 
+        <a href="http://dnfehrenbach.com/projects/epa_analysis/part6/part6.html">Part 6 : Polishing</a> | 
+		<a href="http://dnfehrenbach.com/projects/epa_analysis/part7/part7.html">Part 7 : Final Thoughts</a>
+	</p>
+</div>
+
+
+<div id="Content">
+	<h1>: EPA TRI Data Analysis : Part 7</h1>
+	<h2>Final Thoughts</h2>
+	
+	<p><a href="/projects/epa_analysis/presentation/presentation.html">Watch a presentation about this part in your browser.</a> Requires Flash.</p>
+	
+	<p><a href="/projects/epa_analysis/presentation/dnfehren_618_presentation.mp4">Download the .mp4 video file of the presentation.</a>  Left click and save.</p>
+	
+	<p>Through the past 6 sections of this project we have explored the EPA toxic release data set to get a better understanding of where releases happen, and to whom they happen the most.  This final section will bring many of the skills and functions from previous weeks together to make some final conclusions about toxic releases in the United States and in Michigan, though the code could easily be adapted to any other state in the country.</p>
+	
+	<h3>Section 1 : Trends in Michigan counties by racial demographics</h3>
+	
+	<p>The following set of images combines data about toxic releases in Michigan counties with data describing the racial demographics of each county.    The counties on the y-axis are ranked by percentage of non-white residents, with the whitest county at the top and the county with the highest percentage of all other races at the bottom.  The first image, a heatmap showing the frequency of release events in each county presents a striking image.  From the information on this plot it appears that toxic releases occur more frequently in counties with higher minority populations.  The counties at the top of the list have few, if any release events per year but as the white population percentage decreases the darker bars indicating more frequent releases are much more prominent.  The second image, which maps the magnitude of releases onto the same ranked list of counties, does not show a similar trend, with larger and small yearly totals spread across the list.  So, while counties with larger minority populations are more likely to have more toxic release events, they do not necessarily have larger ones.  This is not particularly comforting for many reasons.  The first is the varying degree of toxicity and danger posed by the chemicals released.  Larger releases may be of less dangerous chemicals.  Also, as toxic chemicals accumulate in the environment the higher number of releases per year may eventually lead to a level of toxicity higher than would be caused by rarer, larger, releases.</p>
+	
+	<p><strong>Click for larger image</strong></p>
+	<p><a href="/images/ggplot2/mi_race_freq.png" class="thickbox"><img src="/images/ggplot2/mi_race_freq_fitted.png" alt="heatmap of toxic release frequency on a list of MI counties ranked by racial makeup"/></a></p>
+    
+	<p><strong>Click for larger image</strong></p>
+	<p><a href="/images/ggplot2/mi_race_mag.png" class="thickbox"><img src="/images/ggplot2/mi_race_mag_fitted.png" alt="heatmap of toxic release magnitude on a list of MI counties ranked by percentage of minority population"/></a></p>
+	    
+	<h3>Section 2 : Trends in Michigan counties by poverty rate</h3>
+	
+	<p>The next set of images combines data about toxic releases in Michigan counties with data describing the level of poverty in each county.  The first image shows a ranked list of counties, with the richest at the top and the poorest at the bottom.  The frequency of toxic release events is compared from 1999-2008.  Darker colors in the image indicate more frequent releases.  There does not appear to be a pattern of more frequent releases in richer or poorer counties.  The darker areas on the plot seem to appear as often in the richer counties at the top of the plot and the poorer counties at the bottom.  The second image presents the same ranked list of counties but instead of the frequency of release events the color of the boxes indicate the amount of toxic chemicals released over the course of the year.  Darker colors indicate that a greater amount of chemicals were released.  Again in this plot there does not appear to be bias towards richer or poorer counties with large events happening in both the richest and poorest counties in the state.</p>
+	
+	<p><strong>Click for larger image</strong></p>
+	<p><a href="/images/ggplot2/mi_pov_freq.png" class="thickbox"><img src="/images/ggplot2/mi_pov_freq_fitted.png" alt="heatmap of toxic release frequency on a list of MI counties ranked by poverty"/></a></p>
+    
+	<p><strong>Click for larger image</strong></p>
+	<p><a href="/images/ggplot2/mi_pov_mag.png" class="thickbox"><img src="/images/ggplot2/mi_pov_mag_fitted.png" alt="heatmap of toxic release magnitude on a list of MI counties ranked by poverty rate"/></a></p>
+	
+	<h3>Section 3 : Regional and State Trends</h3>
+	
+	<p>These two images show the trends from 1999 to 2008 for the frequency of toxic releases across the country. The West South Central (TX, AR, OK, LA) and Mountain (ID, MT, WY, NV, AZ, UT, CO, NM) regions seem to have appreciable increases over the time frame.  The East North Central (WI, MI, IL, IN, OH) and Mid Atlantic (NY, PA, NJ) regions seem to have dropped the most over the same period.   Overall this appears to reflect well established national trends of heavy industry and manufacturing moving from traditional centers in the mid-west and northeast to cheaper areas in the west and south, as well as the prominence of toxic releases in regions with significant energy producing industry.  Nearly all of the regions experienced a lift in 2001, perhaps due to the loosening of environmental regulations during the first years of the George W. Bush Whitehouse.<p>
+	
+    <p><strong>Click for larger image</strong></p>
+	<p><a href="/images/ggplot2/region_trends.png" class="thickbox"><img src="/images/ggplot2/region_trends_fitted.png" alt="regional trends in toxic release frequency"/></a></p>
+    
+	<p>The next image breaks each region into individual states.  Again, an overall downward trend can be seen in nearly all states, as can a visible spike in 2001.  Most obvious is the state of Texas which stands far above all of the other states in its region and above every other state.  The oil and gas industry is the likely explanation for these very high numbers as that industry not only deals with a variety of toxic chemicals and byproducts but also because it is heavily regulated and watched by the EPA, with specific toxic release reporting rules.</p>
+	
+    <p><strong>Click for larger image</strong></p>
+	<p><a href="/images/ggplot2/state_trends.png" class="thickbox"><img src="/images/ggplot2/state_trends_fitted.png" alt="state trends in toxic release frequency"/></a></p>
+	
+	
+	<h3>Files</h3>
+	
+	<p><a href="/projects/epa_analysis/part7/final_thoughts.r">R Script</a> this can be loaded in R and used to reproduce this exercise's commands.</p>
+    
+    <p><a href="/projects/epa_analysis/part6/regionalize.RData">R function</a> load this with the source() command to allow for adding regions to dataframes with state abbreviations.</p>
+	
+	<p><a href="/projects/epa_analysis/part5/epa_99_08.s3db">Custom SQLite database</a> file of EPA data from 1999 to 2008 (~160MB).</p>
+
+	<p><a href="/projects/epa_analysis/part7/poverty_data.csv">Comma separated data sheet</a> with poverty data from 1999 to 2008 for all United States counties.</p>
+	
+	<p><a href="/projects/epa_analysis/part7/race_data.csv">Comma separated data sheet</a> with racial demographic data for each United Stats county as measured in the 2000 Census.</p>
+	
+	<p><a href="/images/ggplot2/final_plots_pdf.zip">Zipped file of pdfs</a> of full size versions of the plots shown on this page.</p>
+	
+	
+	</div>
+
+<script type="text/javascript">
+var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+</script>
+<script type="text/javascript">
+try {
+var pageTracker = _gat._getTracker("UA-15230053-1");
+pageTracker._trackPageview();
+} catch(err) {}</script>
+
+</body>
+</html>
